@@ -24,10 +24,26 @@ public class WordCloudGenerator {
         DictionaryADT<KeyWord> dictionary = new BSTDictionary<KeyWord>();  
 
         // Check the command-line arguments and set up the input and output
+        validateCmdLineArgs(args); // Exits if not valid
         
-        /////////////////////
-        // ADD YOUR CODE HERE
-        ///////////////////// 
+        String fileName = "";
+        try {
+        	fileName = args[0];
+            in = new Scanner(new File(fileName));
+        	fileName = args[1];
+            out = new PrintStream(new File(fileName));
+        	fileName = args[2];
+            inIgnore = new Scanner(new File(fileName));
+        }
+        catch (FileNotFoundException e) {
+        	System.out.println("Error: cannot access file " + fileName);
+        	System.exit(0);
+        }
+        
+        int maxWords;
+        try { maxWords = Integer.valueOf(args[3]); }
+        catch (NumberFormatException e) { maxWords = -1; }
+        validatePositiveInteger(maxWords); // Exits if not valid
 
         // Create the dictionary of words to ignore
         // You do not need to change this code.
@@ -41,35 +57,51 @@ public class WordCloudGenerator {
         }
         
         // Process the input file line by line
-        // Note: the code below just prints out the words contained in each
-        // line.  You will need to replace that code with code to generate
-        // the dictionary of KeyWords.
         while (in.hasNext()) {
             String line = in.nextLine();
             List<String> words = parseLine(line);
 
-            ////////////////////////////////////////
-            // REPLACE THE CODE BELOW WITH YOUR CODE
-            for (String word : words)
-                out.print(word + " | ");
-            out.println();
-            ////////////////////////////////////////
-
+            for (String word : words) {
+            	String ignoreWord = ignore.lookup(word);
+            	if (ignoreWord != null) { continue; }
+            	KeyWord newWordEntry = new KeyWord(word);
+            	try {
+            		dictionary.insert(newWordEntry);
+            	}
+            	catch (DuplicateException e) {
+            		newWordEntry = dictionary.lookup(newWordEntry);
+            	}
+            	//TODO This isn't working right.
+            	// Everything is getting a 1 for occurrences.
+            	newWordEntry.increment();
+            }
         } // end while
-
         
-        ////////////////////////////////////////////////////////////
-        // ADD YOUR CODE HERE TO
-        // - Print out the information about the dictionary:
-        //     - # of keys
-        //     - average path length
-        //     - linear average path length
-        // - Put the dictionary into a priority queue
-        // - Use the priority queue to create a list of KeyWords of 
-        //   the appropriate length
-        // - Generate the html output file
-        ////////////////////////////////////////////////////////////
+        int numKeys = dictionary.size();
+        System.out.printf("# keys: %d", numKeys);
+        System.out.println("");
+        double avgPathLength = (double) dictionary.totalPathLength() / numKeys;
+        System.out.printf("avg path length: %.3f", avgPathLength);
+        System.out.println("");
+        double linearPathLength = (double) (numKeys + 1) / 2;
+        System.out.printf("linear avg path: %.1f", linearPathLength);
+        System.out.println("");
         
+        ArrayHeap<KeyWord> priorityQueue = new ArrayHeap<KeyWord>(numKeys);
+        Iterator<KeyWord> wordIter = dictionary.iterator();
+        while (wordIter.hasNext()) { priorityQueue.insert(wordIter.next()); }
+        
+        BSTDictionary<KeyWord> wordCloudList = new BSTDictionary<>();
+        while (wordCloudList.size() < maxWords && !priorityQueue.isEmpty()) {
+        	try {
+        		wordCloudList.insert(priorityQueue.removeMax());
+        	}
+        	// There shouldn't be any duplicates in the priority queue, so no
+        	// need to handle the exception
+        	catch (DuplicateException e) {}
+        }
+        
+        generateHtml(wordCloudList, out);
 
         // Close everything
         if (in != null) 
@@ -195,7 +227,7 @@ public class WordCloudGenerator {
             int occur = word.getOccurrences();
             if (occur > max)
                 max = occur;
-            else if (occur < min)
+            if (occur < min)
                 min = occur;
         }
 
@@ -217,4 +249,19 @@ public class WordCloudGenerator {
         // Print the closing tags
         out.println("</p></body>\n</html>");
     }
- }
+ 
+    private static void validateCmdLineArgs(String[] args) {
+    	if (args.length != 4) {
+        	System.out.println("Four arguments required: inputFileName "
+        			+ "outputFileName ignoreFileName maxWords");
+        	System.exit(0);
+        }
+    }
+    
+    private static void validatePositiveInteger(int num) {
+    	if (num < 1) {
+    		System.out.println("Error: maxWords must be a positive integer");
+    		System.exit(0);
+    	}
+    }
+}

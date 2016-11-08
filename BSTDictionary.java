@@ -4,109 +4,137 @@ public class BSTDictionary<K extends Comparable<K>>
 	implements DictionaryADT<K> {
     private BSTnode<K> root;  // the root node
     private int numItems;     // the number of items in the dictionary
-
-    // TO DO:
-    //
-    // Add a no-argument constructor
-    //
-    // Add your code to implement the Dictionary ADT operations using a binary
-    // search tree.
-    // You may use any code given in the on-line reading on BSTs.
     
     public BSTDictionary() {
-    	this.root = null;
-    	this.numItems = 0;
+    	root = null;
+    	numItems = 0;
     }
     
     public void insert(K key) throws DuplicateException {
-        this.insertInternalRecursion(root, key);
+        root = insert(root, key);
     }
     
-    private BSTnode<K> insertInternalRecursion(BSTnode<K> searchNode, K key)
+    private BSTnode<K> insert(BSTnode<K> searchNode, K key)
     		throws DuplicateException {
     	BSTnode<K> returnNode;
-    	if (searchNode == null) { returnNode = new BSTnode<K>(key); }
+    	if (searchNode == null) {
+    		returnNode = new BSTnode<K>(key);
+    		numItems++;
+    	}
     	else {
     		returnNode = searchNode;
     		int comparisonValue = searchNode.getKey().compareTo(key);
     		// Duplicate key
     		if (comparisonValue == 0) { throw new DuplicateException(); }
     		// Insert into left subtree
-    		else if (comparisonValue < 0) {
-    			searchNode.setLeft(this.insertInternalRecursion(
-    					searchNode.getLeft(), key));
+    		else if (comparisonValue > 0) {
+    			searchNode.setLeft(this.insert(searchNode.getLeft(), key));
     		}
     		// Insert into right subtree
     		else {
-    			searchNode.setRight(this.insertInternalRecursion(
-    					searchNode.getRight(), key));
+    			searchNode.setRight(this.insert(searchNode.getRight(), key));
     		}
     	}
     	return returnNode;
     }
 
     public boolean delete(K key) {
-        return this.deleteInternalRecursion(root, key);
+    	int initialNumItems = numItems;
+    	root = delete(root, key);
+    	return (initialNumItems != numItems);
     }
     
-    private boolean deleteInternalRecursion(BSTnode<K> searchNode, K key) {
-    	boolean returnValue = false;
+    private BSTnode<K> delete(BSTnode<K> searchNode, K key) {
+    	BSTnode<K> returnNode = searchNode;
     	if (searchNode != null) {
     		int comparisonValue = searchNode.getKey().compareTo(key);
     		// Found key
     		if (comparisonValue == 0) {
-    			returnValue = true;
-    			// Now find the max
-    			if (searchNode.getLeft() != null) {
-    				//TODO Need to figure this out...
-//    				searchNode = new BSTnode<K>(this.getMaxNode(
-//    						searchNode.getLeft()).getKey());
+    			// If no right child, return left child
+    			// This also handle the case when both are null
+    			if (searchNode.getRight() == null) {
+    				returnNode = searchNode.getLeft();
+    				numItems--;
     			}
+    			// If no left child, return right child
+    			else if (searchNode.getLeft() == null) {
+    				returnNode = searchNode.getRight();
+    				numItems--;
+    			}
+    			/*
+    			 * There are two children, so replace the key of the current
+    			 * node with the minimum of the right subtree.
+    			 * This preserves the BST properties.
+    			 * Once copied, delete the node containing that minimum key.
+    			 */
     			else {
-    				searchNode = searchNode.getRight();
+    				BSTnode<K> replaceNode = getMinNode(searchNode.getRight());
+    				K replaceKey = replaceNode.getKey();
+    				searchNode.setKey(replaceKey);
+    				delete(replaceNode, replaceKey);
     			}
     		}
     		// Delete from left subtree
-    		else if (comparisonValue < 0) {
-    			returnValue = this.deleteInternalRecursion(
-    					searchNode.getLeft(), key);
+    		else if (comparisonValue > 0) {
+    			searchNode.setLeft(this.delete(searchNode.getLeft(), key));
     		}
     		// Delete from right subtree
     		else {
-    			returnValue = this.deleteInternalRecursion(
-    					searchNode.getRight(), key);
+    			searchNode.setRight(this.delete(searchNode.getRight(), key));
     		}
     	}
-    	return returnValue;
+    	return returnNode;
     }
     
-    private BSTnode<K> getMaxNode(BSTnode<K> searchNode) {
-    	BSTnode<K> maxNode = null;
+    private BSTnode<K> getMinNode(BSTnode<K> searchNode) {
+    	BSTnode<K> minNode = null;
     	BSTnode<K> testNode = searchNode;
     	while (testNode != null) {
-    		maxNode = testNode;
-    		testNode = maxNode.getRight();
+    		minNode = testNode;
+    		testNode = minNode.getLeft();
     	}
-    	return maxNode;
+    	return minNode;
     }
 
     public K lookup(K key) {
-        return null;  // replace this stub with your code
+        return lookup(root, key);
     }
 
-    public boolean isEmpty() {
-        return false;  // replace this stub with your code
+    private K lookup(BSTnode<K> searchNode, K key) {
+    	K returnKey = null;
+    	if (searchNode != null) {
+    		int comparisonValue = searchNode.getKey().compareTo(key);
+    		// Found key
+    		if (comparisonValue == 0) {
+    			returnKey = key;
+    		}
+    		// Search left subtree
+    		else if (comparisonValue > 0) {
+    			returnKey = this.lookup(searchNode.getLeft(), key);
+    		}
+    		// Search right subtree
+    		else {
+    			returnKey = this.lookup(searchNode.getRight(), key);
+    		}
+    	}
+    	return returnKey;
     }
+    
+    public boolean isEmpty() { return (numItems == 0); }
 
-    public int size() {
-        return 0;  // replace this stub with your code
-    }
+    public int size() { return numItems; }
     
     public int totalPathLength() {
-        return 0;  // replace this stub with your code
+        return totalPathLength(root, 0);
     }
     
-    public Iterator<K> iterator() {
-        return null;  // replace this stub with your code
+    private int totalPathLength(BSTnode<K> searchNode,
+    		int currDepth) {
+    	if (searchNode == null) { return 0; }
+    	return currDepth
+    			+ this.totalPathLength(searchNode.getLeft(), currDepth + 1)
+    			+ this.totalPathLength(searchNode.getRight(), currDepth + 1);
     }
+    
+    public Iterator<K> iterator() { return new BSTDictionaryIterator<>(root); }
 }

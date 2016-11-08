@@ -6,26 +6,31 @@ import java.util.*;
  * order of the key values (from smallest to largest).
  */
 public class BSTDictionaryIterator<K> implements Iterator<K> {
+	
+	private Stack<BSTnode<K>> nodeStack = new Stack<BSTnode<K>>();
+	
+	public BSTDictionaryIterator(BSTnode<K> initialNode){
+		pushAllLeftChildren(initialNode);
+	}
+	
+	private void pushAllLeftChildren(BSTnode<K> parentNode) {
+		if (parentNode != null) {
+			BSTnode<K> testNode = parentNode;
+			while (testNode != null) {
+				nodeStack.push(testNode);
+				testNode = testNode.getLeft();
+			}
+		}
+	}
 
-    // TO DO:
-    //
-    // Add your code to implement the BSTDictionaryIterator.  To receive full
-    // credit:
-    // - You must not use recursion in any of methods or constructor.
-    // - The constructor must have a worst-case complexity of O(height of BST).
-    // 
-    // Hint: use a Stack and push/pop nodes as you iterate through the BST.
-    // The constructor should push all the nodes needed so the *first* call 
-    // to next() returns the value in the node with the smallest key.
-    // (You can use the Java API Stack or implement your own Stack - if you
-    // implement your own, make sure to hand it in.)
-
-    public boolean hasNext() {
-        return false;  // replace this stub with your code
-    }
+    public boolean hasNext() { return !nodeStack.isEmpty(); }
 
     public K next() {
-        return null;  // replace this stub with your code
+    	// returnNode will never have a left child since we push all left
+    	// children onto the stack together.
+        BSTnode<K> returnNode = nodeStack.pop();
+        pushAllLeftChildren(returnNode.getRight());
+        return returnNode.getKey();
     }
 
     public void remove() {
