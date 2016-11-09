@@ -1,32 +1,43 @@
+///////////////////////////////////////////////////////////////////////////////
+// Title:            Prog3-WordCloud
+// Files:            WordCloudGenerator.java
+// Semester:         Fall 2016
+//
+// Author:           Alex McClain, gamcclain@wisc.edu
+// CS Login:         gamcclain@wisc.edu
+// Lecturer's Name:  Charles Fischer
+///////////////////////////////////////////////////////////////////////////////
 import java.util.*;
 import java.io.*;
 
+/**
+ * Main class for the word cloud generator. Takes in files for both input and
+ * output and calculates the word volume and output graphic HTML.
+ * @author amcclain
+ */
 public class WordCloudGenerator {
-    /**
-     * The main method generates a word cloud as described in the program 
-     * write-up.  You will need to add to the code given here.
-     * 
-     * @param args the command-line arguments that determine where input and 
-     * output is done:
-     * <ul>
-     *   <li>args[0] is the name of the input file</li>
-     *   <li>args[1] is the name of the output file</li>
-     *   <li>args[2] is the name of the file containing the words to ignore 
-     *       when generating the word cloud</li>
-     *   <li>args[3] is the maximum number of words to include in the word 
-     *       cloud</li> 
-     * </ul>
-     */
+    
+	/**
+	 * Main method responsible for reading in arguments, processing texts, and
+	 * generating the word cloud HTML.
+	 * @param args Array of command line inputs.
+	 * [0] - inputFile
+	 * [1] - outputFile
+	 * [2] - ignoreFile
+	 * [3] - maxWords
+	 */
     public static void main(String[] args) {
         Scanner in = null;         // for input from text file
         PrintStream out = null;    // for output to html file
         Scanner inIgnore = null;   // for input from ignore file
+        // Dictionary for words in the input file
         DictionaryADT<KeyWord> dictionary = new BSTDictionary<KeyWord>();  
 
         // Check the command-line arguments and set up the input and output
         validateCmdLineArgs(args); // Exits if not valid
         
         String fileName = "";
+        // Open all necessary files for reading/writing
         try {
         	fileName = args[0];
             in = new Scanner(new File(fileName));
@@ -62,7 +73,7 @@ public class WordCloudGenerator {
             List<String> words = parseLine(line);
 
             for (String word : words) {
-            	String ignoreWord = ignore.lookup(word);
+            	String ignoreWord = ignore.lookup(word.toLowerCase());
             	if (ignoreWord != null) { continue; }
             	KeyWord newWordEntry = new KeyWord(word);
             	try {
@@ -71,26 +82,31 @@ public class WordCloudGenerator {
             	catch (DuplicateException e) {
             		newWordEntry = dictionary.lookup(newWordEntry);
             	}
-            	//TODO This isn't working right.
-            	// Everything is getting a 1 for occurrences.
             	newWordEntry.increment();
             }
         } // end while
         
+        // Print out basic statistics about the input text
+        // Number of unique words
         int numKeys = dictionary.size();
         System.out.printf("# keys: %d", numKeys);
         System.out.println("");
+        // Average path length in the dictionary
         double avgPathLength = (double) dictionary.totalPathLength() / numKeys;
         System.out.printf("avg path length: %.3f", avgPathLength);
         System.out.println("");
+        // Average linear path length were this stored in a singly linked list
         double linearPathLength = (double) (numKeys + 1) / 2;
         System.out.printf("linear avg path: %.1f", linearPathLength);
         System.out.println("");
         
+        // Populate the priority queue based on number of occurrences
         ArrayHeap<KeyWord> priorityQueue = new ArrayHeap<KeyWord>(numKeys);
         Iterator<KeyWord> wordIter = dictionary.iterator();
         while (wordIter.hasNext()) { priorityQueue.insert(wordIter.next()); }
         
+        // Insert the top priority words into a second dictionary to be
+        // displayed in the word cloud.
         BSTDictionary<KeyWord> wordCloudList = new BSTDictionary<>();
         while (wordCloudList.size() < maxWords && !priorityQueue.isEmpty()) {
         	try {
@@ -250,6 +266,11 @@ public class WordCloudGenerator {
         out.println("</p></body>\n</html>");
     }
  
+    /**
+     * Validates that the correct number of command line arguments are given.
+     * Exits if the test fails.
+     * @param args Array of command line arguments.
+     */
     private static void validateCmdLineArgs(String[] args) {
     	if (args.length != 4) {
         	System.out.println("Four arguments required: inputFileName "
@@ -258,6 +279,10 @@ public class WordCloudGenerator {
         }
     }
     
+    /**
+     * Validates the input is a positive integer. Exits if the test fails
+     * @param num The number of validate.
+     */
     private static void validatePositiveInteger(int num) {
     	if (num < 1) {
     		System.out.println("Error: maxWords must be a positive integer");
